@@ -90,12 +90,19 @@ void ColumnStr<T>::shrink_padding_chars() {
     auto* offset = offsets.data();
     size_t size = offsets.size();
 
+    auto trim_trailing_padding_zero = [](const char* str, size_t len) {
+        while (len > 0 && str[len - 1] == '\0') {
+            --len;
+        }
+        return len;
+    };
+
     // deal the 0-th element. no need to move.
     auto next_start = offset[0];
-    offset[0] = static_cast<T>(strnlen(data, size_at(0)));
+    offset[0] = static_cast<T>(trim_trailing_padding_zero(data, size_at(0)));
     for (size_t i = 1; i < size; i++) {
-        // get the i-th length and whole move it to cover the last's trailing void
-        auto length = strnlen(data + next_start, offset[i] - next_start);
+        // keep embedded '\0' in content and trim only tail padding '\0'
+        auto length = trim_trailing_padding_zero(data + next_start, offset[i] - next_start);
         memmove(data + offset[i - 1], data + next_start, length);
         // offset i will be changed. so save the old value for (i+1)-th to get its length.
         next_start = offset[i];

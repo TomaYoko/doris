@@ -548,18 +548,15 @@ Status OlapBlockDataConvertor::OlapColumnDataConvertorChar::convert_to_olap() {
         column_string = assert_cast<const vectorized::ColumnString*>(_typed_column.column.get());
     }
 
-    // If column_string is not padded to full, we should do padding here.
-    if (should_padding(column_string, _length)) {
-        _column = clone_and_padding(column_string, _length);
-        column_string = assert_cast<const vectorized::ColumnString*>(_column.get());
-    }
-
     for (size_t i = 0; i < _num_rows; i++) {
         if (!_nullmap || !_nullmap[i + _row_pos]) {
-            _slice[i] = column_string->get_data_at(i + _row_pos).to_slice();
-            DCHECK(_slice[i].size == _length)
-                    << "char type data length not equal to schema, schema=" << _length
-                    << ", real=" << _slice[i].size;
+            auto ref = column_string->get_data_at(i + _row_pos);
+            if (UNLIKELY(ref.size > _length)) {
+                return Status::InvalidArgument(
+                        "char type data length over limit, schema={}, real={}", _length,
+                        ref.size);
+            }
+            _slice[i] = ref.to_slice();
         }
     }
 

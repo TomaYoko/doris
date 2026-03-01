@@ -1998,6 +1998,13 @@ void SegmentIterator::_vec_init_char_column_id(vectorized::Block* block) {
     }
 }
 
+void SegmentIterator::_shrink_char_columns(vectorized::Block* block) const {
+    // Keep trailing '\0' bytes for CHAR values so payloads ending with '\0' can be read back.
+    // NOTE: with fixed-length CHAR storage, trailing payload zeros and padding zeros are not
+    // distinguishable, so we preserve storage bytes as-is here.
+    (void)block;
+}
+
 bool SegmentIterator::_prune_column(ColumnId cid, vectorized::MutableColumnPtr& column,
                                     bool fill_defaults, size_t num_of_defaults) {
     if (_need_read_data(cid)) {
@@ -2652,8 +2659,7 @@ Status SegmentIterator::_next_batch_internal(vectorized::Block* block) {
     // step5: output columns
     RETURN_IF_ERROR(_output_non_pred_columns(block));
     RETURN_IF_ERROR(_materialization_of_virtual_column(block));
-    // shrink char_type suffix zero data
-    block->shrink_char_type_column_suffix_zero(_char_type_idx);
+    _shrink_char_columns(block);
     return _check_output_block(block);
 }
 
@@ -2760,7 +2766,7 @@ Status SegmentIterator::_process_common_expr(uint16_t* sel_rowid_idx, uint16_t& 
     }
 
     _output_index_result_column_for_expr(_sel_rowid_idx.data(), _selected_size, block);
-    block->shrink_char_type_column_suffix_zero(_char_type_idx);
+    _shrink_char_columns(block);
     RETURN_IF_ERROR(_execute_common_expr(_sel_rowid_idx.data(), _selected_size, block));
 
     if (need_mock_col) {
@@ -3145,7 +3151,7 @@ Status SegmentIterator::_materialization_of_virtual_column(vectorized::Block* bl
                     idx_in_block, block->columns(), _vir_cid_to_idx_in_block.size(),
                     column_expr->root()->debug_string());
         }
-        block->shrink_char_type_column_suffix_zero(_char_type_idx);
+        _shrink_char_columns(block);
         if (vectorized::check_and_get_column<const vectorized::ColumnNothing>(
                     block->get_by_position(idx_in_block).column.get())) {
             VLOG_DEBUG << fmt::format("Virtual column is doing materialization, cid {}, col idx {}",

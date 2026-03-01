@@ -205,11 +205,12 @@ private:
     bool _is_literal_node(const TExprNodeType::type& node_type);
 
     Status _vec_init_lazy_materialization();
-    // TODO: Fix Me
-    // CHAR type in storage layer padding the 0 in length. But query engine need ignore the padding 0.
-    // so segment iterator need to shrink char column before output it. only use in vec query engine.
+    // CHAR columns are stored as fixed-length values and are zero padded at storage layer.
+    // To preserve payloads that end with '\0', we keep trailing zero bytes when returning block
+    // data to vectorized execution.
     void _vec_init_char_column_id(vectorized::Block* block);
     bool _has_char_type(const Field& column_desc);
+    void _shrink_char_columns(vectorized::Block* block) const;
 
     uint32_t segment_id() const { return _segment->id(); }
     uint32_t num_rows() const { return _segment->num_rows(); }
