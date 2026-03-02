@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <boost/iterator/iterator_facade.hpp>
 #include <climits>
+#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -59,7 +60,9 @@
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_type_number.h"
 #include "vec/data_types/data_type_string.h"
+#include "vec/data_types/data_type_timestamptz.h"
 #include "vec/exprs/function_context.h"
+#include "vec/functions/cast/cast_to_datetimev2_impl.hpp"
 #include "vec/functions/datetime_errors.h"
 #include "vec/functions/function.h"
 #include "vec/functions/simple_function_factory.h"
@@ -237,6 +240,173 @@ private:
                 [[unlikely]] {
             result_null_map[index] = 1;
         }
+    }
+};
+
+struct ToTimestampTz {
+    static constexpr auto name = "to_timestamp_tz";
+
+    static bool is_variadic() { return false; }
+    static size_t get_number_of_arguments() { return 2; }
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<DataTypeString>(), std::make_shared<DataTypeString>()};
+    }
+    static bool use_default_implementation_for_nulls() { return false; }
+    static DataTypePtr get_return_type_impl(const DataTypes&) {
+        return std::make_shared<DataTypeTimeStampTz>(6);
+    }
+
+    static Status execute(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                          uint32_t result, size_t input_rows_count) {
+        auto result_null_map_column = ColumnUInt8::create(input_rows_count, 0);
+        NullMap& result_null_map = assert_cast<ColumnUInt8&>(*result_null_map_column).get_data();
+
+        ColumnPtr col_src;
+        ColumnPtr col_fmt;
+        bool src_const = false;
+        bool fmt_const = false;
+        std::tie(col_src, src_const) = unpack_if_const(block.get_by_position(arguments[0]).column);
+        std::tie(col_fmt, fmt_const) = unpack_if_const(block.get_by_position(arguments[1]).column);
+
+        const NullMap* null_map_src =
+                VectorizedUtils::get_null_map(block.get_by_position(arguments[0]).column);
+        const NullMap* null_map_fmt =
+                VectorizedUtils::get_null_map(block.get_by_position(arguments[1]).column);
+        if (null_map_src) {
+            VectorizedUtils::update_null_map(result_null_map, *null_map_src, src_const);
+        }
+        if (null_map_fmt) {
+            VectorizedUtils::update_null_map(result_null_map, *null_map_fmt, fmt_const);
+        }
+
+        col_src = remove_nullable(col_src);
+        col_fmt = remove_nullable(col_fmt);
+
+        const auto* src_column = assert_cast<const ColumnString*>(col_src.get());
+        const auto* fmt_column = assert_cast<const ColumnString*>(col_fmt.get());
+
+        auto res = ColumnTimeStampTz::create(input_rows_count);
+        auto& res_data = res->get_data();
+        const auto& local_time_zone = context->state()->timezone_obj();
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            if (result_null_map[i]) {
+                continue;
+            }
+            const StringRef source = src_column->get_data_at(index_check_const(i, src_const));
+            const StringRef format = fmt_column->get_data_at(index_check_const(i, fmt_const));
+            if (!parse_oracle_timestamp_tz(source, format, local_time_zone, res_data[i])) {
+                result_null_map[i] = 1;
+            }
+        }
+
+        block.replace_by_position(result,
+                                  ColumnNullable::create(std::move(res),
+                                                         std::move(result_null_map_column)));
+        return Status::OK();
+    }
+
+private:
+    static bool parse_fixed_int(const char* data, size_t size, size_t& pos, int digits, int* out) {
+        if (pos + digits > size) {
+            return false;
+        }
+        int v = 0;
+        for (int i = 0; i < digits; ++i) {
+            if (!isdigit(data[pos + i])) {
+                return false;
+            }
+            v = v * 10 + (data[pos + i] - '0');
+        }
+        *out = v;
+        pos += digits;
+        return true;
+    }
+
+    static bool parse_oracle_timestamp_tz(const StringRef& source, const StringRef& format,
+                                          const cctz::time_zone& local_time_zone,
+                                          TimestampTzValue& result) {
+        std::string fmt_upper(format.data, format.size);
+        std::transform(fmt_upper.begin(), fmt_upper.end(), fmt_upper.begin(), ::toupper);
+        size_t fpos = 0;
+        size_t spos = 0;
+        int year = -1, month = -1, day = -1, hour = 0, minute = 0, second = 0;
+        int tz_h = 0, tz_m = 0;
+        bool has_tz = false;
+        bool tz_neg = false;
+        uint32_t microsecond = 0;
+
+        while (fpos < fmt_upper.size()) {
+            if (fmt_upper.compare(fpos, 4, "YYYY") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 4, &year)) return false;
+                fpos += 4;
+            } else if (fmt_upper.compare(fpos, 2, "MM") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &month)) return false;
+                fpos += 2;
+            } else if (fmt_upper.compare(fpos, 2, "DD") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &day)) return false;
+                fpos += 2;
+            } else if (fmt_upper.compare(fpos, 4, "HH24") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &hour)) return false;
+                fpos += 4;
+            } else if (fmt_upper.compare(fpos, 2, "MI") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &minute)) return false;
+                fpos += 2;
+            } else if (fmt_upper.compare(fpos, 2, "SS") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &second)) return false;
+                fpos += 2;
+            } else if (fmt_upper.compare(fpos, 2, "FF") == 0) {
+                fpos += 2;
+                int scale = 6;
+                if (fpos < fmt_upper.size() && isdigit(fmt_upper[fpos])) {
+                    scale = std::min(6, std::max(1, fmt_upper[fpos] - '0'));
+                    ++fpos;
+                }
+                int frac = 0;
+                if (!parse_fixed_int(source.data, source.size, spos, scale, &frac)) return false;
+                for (int i = scale; i < 6; ++i) {
+                    frac *= 10;
+                }
+                microsecond = frac;
+            } else if (fmt_upper.compare(fpos, 3, "TZH") == 0) {
+                if (spos >= source.size || (source.data[spos] != '+' && source.data[spos] != '-')) {
+                    return false;
+                }
+                tz_neg = source.data[spos] == '-';
+                ++spos;
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &tz_h)) return false;
+                has_tz = true;
+                fpos += 3;
+            } else if (fmt_upper.compare(fpos, 3, "TZM") == 0) {
+                if (!parse_fixed_int(source.data, source.size, spos, 2, &tz_m)) return false;
+                has_tz = true;
+                fpos += 3;
+            } else {
+                if (spos >= source.size || source.data[spos] != format.data[fpos]) {
+                    return false;
+                }
+                ++spos;
+                ++fpos;
+            }
+        }
+
+        if (spos != source.size || year < 0 || month < 0 || day < 0) {
+            return false;
+        }
+
+        char buf[64];
+        int n = snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d.%06u", year, month,
+                         day, hour, minute, second, microsecond);
+        std::string canonical(buf, n);
+        if (has_tz) {
+            canonical += tz_neg ? "-" : "+";
+            char tz_buf[7];
+            snprintf(tz_buf, sizeof(tz_buf), "%02d:%02d", tz_h, tz_m);
+            canonical += tz_buf;
+        }
+
+        CastParameters params;
+        return result.from_string(StringRef(canonical), &local_time_zone, params, 6);
     }
 };
 
@@ -1486,6 +1656,7 @@ using FunctionDateTruncDatetimeV2WithCommonOrder =
 using FunctionDateTruncTimestamptzWithCommonOrder =
         FunctionOtherTypesToDateType<DateTrunc<TYPE_TIMESTAMPTZ, false>>;
 using FunctionFromIso8601DateV2 = FunctionOtherTypesToDateType<FromIso8601DateV2>;
+using FunctionToTimestampTz = FunctionOtherTypesToDateType<ToTimestampTz>;
 
 void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStrToDate>();
@@ -1500,6 +1671,7 @@ void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionDateTruncDatetimeV2WithCommonOrder>();
     factory.register_function<FunctionDateTruncTimestamptzWithCommonOrder>();
     factory.register_function<FunctionFromIso8601DateV2>();
+    factory.register_function<FunctionToTimestampTz>();
 
     factory.register_function<FunctionUnixTimestamp<UnixTimeStampImpl<>>>();
     factory.register_function<FunctionUnixTimestamp<UnixTimeStampDateImpl<DataTypeDate>>>();
