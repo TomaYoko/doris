@@ -3668,6 +3668,8 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
 
     @Override
     public Literal visitIntegerLiteral(IntegerLiteralContext ctx) {
+        // INTEGER_LITERAL_TYPE_FLOW step-2:
+        // Convert integer lexical token to BigInteger, then map to concrete Literal by range.
         BigInteger bigInt = new BigInteger(ctx.getText());
         if (BigInteger.valueOf(bigInt.byteValue()).equals(bigInt)) {
             return new TinyIntLiteral(bigInt.byteValue());
@@ -3677,8 +3679,12 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
             return new IntegerLiteral(bigInt.intValue());
         } else if (BigInteger.valueOf(bigInt.longValue()).equals(bigInt)) {
             return new BigIntLiteral(bigInt.longValueExact());
-        } else {
+        } else if (bigInt.compareTo(LargeIntType.MAX_VALUE) <= 0 && bigInt.compareTo(LargeIntType.MIN_VALUE) >= 0) {
             return new LargeIntLiteral(bigInt);
+        } else {
+            // INTEGER_LITERAL_TYPE_FLOW step-2 (overflow branch):
+            // Only when value is out of LARGEINT range, parse as DecimalV3Literal.
+            return DecimalV3Literal.createWithCheck256(new BigDecimal(bigInt));
         }
     }
 

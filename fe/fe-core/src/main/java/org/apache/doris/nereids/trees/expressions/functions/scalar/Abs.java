@@ -45,6 +45,8 @@ import java.util.List;
 public class Abs extends ScalarFunction
         implements UnaryExpression, ExplicitlyCastableSignature, PropagateNullable, DecimalSamePrecision {
 
+    // INTEGER_LITERAL_TYPE_FLOW step-3:
+    // Function binding chooses one of these signatures based on the literal type from parser stage.
     public static final List<FunctionSignature> SIGNATURES = ImmutableList.of(
             FunctionSignature.ret(DoubleType.INSTANCE).args(DoubleType.INSTANCE),
             FunctionSignature.ret(FloatType.INSTANCE).args(FloatType.INSTANCE),
