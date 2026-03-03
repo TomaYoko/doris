@@ -21,6 +21,8 @@ import org.apache.doris.common.Config;
 import org.apache.doris.nereids.parser.NereidsParser;
 import org.apache.doris.nereids.trees.expressions.LessThan;
 import org.apache.doris.nereids.trees.expressions.literal.DateLiteral;
+import org.apache.doris.nereids.trees.expressions.literal.DecimalV3Literal;
+import org.apache.doris.nereids.trees.expressions.literal.LargeIntLiteral;
 import org.apache.doris.nereids.util.MemoPatternMatchSupported;
 import org.apache.doris.nereids.util.PlanChecker;
 import org.apache.doris.utframe.TestWithFeService;
@@ -72,6 +74,32 @@ public class BindFunctionTest extends TestWithFeService implements MemoPatternMa
                                 logicalProject(logicalFilter()),
                                 logicalProject(logicalOlapScan())
                         ).when(join -> join.getHashJoinConjuncts().size() == 1)
+                );
+    }
+
+    @Test
+    void testAbsWithLargeIntLiteral() {
+        String sql = "select abs(1111111111111111111111111111111111111)";
+
+        PlanChecker.from(connectContext)
+                .analyze(sql)
+                .rewrite()
+                .matches(
+                        logicalOneRowRelation().when(oneRowRelation -> oneRowRelation.getProjects().stream()
+                                .allMatch(project -> project instanceof LargeIntLiteral))
+                );
+    }
+
+    @Test
+    void testAbsWithOutOfRangeLargeIntLiteral() {
+        String sql = "select abs(170141183460469231731687303715884105728)";
+
+        PlanChecker.from(connectContext)
+                .analyze(sql)
+                .rewrite()
+                .matches(
+                        logicalOneRowRelation().when(oneRowRelation -> oneRowRelation.getProjects().stream()
+                                .allMatch(project -> project instanceof DecimalV3Literal))
                 );
     }
 }

@@ -1930,6 +1930,8 @@ quotedIdentifier
     : BACKQUOTED_IDENTIFIER
     ;
 
+// INTEGER_LITERAL_TYPE_FLOW step-1:
+// Grammar layer classifies numeric lexemes into integerLiteral/decimalLiteral.
 number
     : SUBTRACT? INTEGER_VALUE                    #integerLiteral
     | SUBTRACT? (EXPONENT_VALUE | DECIMAL_VALUE) #decimalLiteral

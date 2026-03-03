@@ -66,6 +66,8 @@ public class NumericArithmetic {
         return new IntegerLiteral(Math.abs(literal.getValue()));
     }
 
+    // INTEGER_LITERAL_TYPE_FLOW step-4:
+    // Constant folding executes the implementation that matches bound literal class.
     @ExecFunction(name = "abs")
     public static Expression abs(IntegerLiteral literal) {
         return new BigIntLiteral(Math.abs((long) literal.getValue()));
