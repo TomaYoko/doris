@@ -1,0 +1,78 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+#include "inverted_index_compaction.h"
+
+#include "inverted_index_file_writer.h"
+#include "inverted_index_fs_directory.h"
+#include "olap/tablet_schema.h"
+#include "util/debug_points.h"
+
+namespace doris::segment_v2 {
+Status compact_column(int64_t index_id,
+                      std::vector<std::unique_ptr<DorisCompoundReader>>& src_index_dirs,
+                      std::vector<lucene::store::Directory*>& dest_index_dirs,
+                      const io::FileSystemSPtr& fs, std::string tmp_path,
+                      std::vector<std::vector<std::pair<uint32_t, uint32_t>>> trans_vec,
+                      std::vector<uint32_t> dest_segment_num_rows) {
+    DBUG_EXECUTE_IF("index_compaction_compact_column_throw_error", {
+        if (index_id % 2 == 0) {
+            _CLTHROWA(CL_ERR_IO, "debug point: test throw error in index compaction");
+        }
+    })
+    DBUG_EXECUTE_IF("index_compaction_compact_column_status_not_ok", {
+        if (index_id % 2 == 1) {
+            return Status::Error<ErrorCode::INVERTED_INDEX_COMPACTION_ERROR>(
+                    "debug point: index compaction error");
+        }
+    })
+    bool can_use_ram_dir = true;
+    lucene::store::Directory* dir =
+            DorisFSDirectoryFactory::getDirectory(fs, tmp_path.c_str(), can_use_ram_dir);
+    lucene::analysis::SimpleAnalyzer<char> analyzer;
+    auto* index_writer = _CLNEW lucene::index::IndexWriter(dir, &analyzer, true /* create */,
+                                                           true /* closeDirOnShutdown */);
+
+    DCHECK_EQ(src_index_dirs.size(), trans_vec.size());
+    std::vector<lucene::store::Directory*> tmp_src_index_dirs(src_index_dirs.size());
+    for (size_t i = 0; i < tmp_src_index_dirs.size(); ++i) {
+        tmp_src_index_dirs[i] = src_index_dirs[i].get();
+    }
+    index_writer->indexCompaction(tmp_src_index_dirs, dest_index_dirs, trans_vec,
+                                  dest_segment_num_rows);
+
+    index_writer->close();
+    _CLDELETE(index_writer);
+    // NOTE: need to ref_cnt-- for dir,
+    // when index_writer is destroyed, if closeDir is set, dir will be close
+    // _CLDECDELETE(dir) will try to ref_cnt--, when it decreases to 1, dir will be destroyed.
+    _CLDECDELETE(dir)
+    for (auto* d : dest_index_dirs) {
+        if (d != nullptr) {
+            // NOTE: DO NOT close dest dir here, because it will be closed when dest index writer finalize.
+            //d->close();
+            //_CLDELETE(d);
+        }
+    }
+
+    // delete temporary segment_path, only when inverted_index_ram_dir_enable is false
+    if (!config::inverted_index_ram_dir_enable) {
+        static_cast<void>(fs->delete_directory(tmp_path.c_str()));
+    }
+    return Status::OK();
+}
+} // namespace doris::segment_v2
