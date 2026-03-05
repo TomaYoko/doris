@@ -473,8 +473,10 @@ public class CreateTableInfo {
                     && keysType.equals(KeysType.UNIQUE_KEYS)) {
                 if (isEnableMergeOnWrite) {
                     columns.add(ColumnDefinition.newVersionColumnDefinition(AggregateType.NONE));
+                    columns.add(ColumnDefinition.newCommitIdColumnDefinition(AggregateType.NONE));
                 } else {
                     columns.add(ColumnDefinition.newVersionColumnDefinition(AggregateType.REPLACE));
+                    columns.add(ColumnDefinition.newCommitIdColumnDefinition(AggregateType.REPLACE));
                 }
             }
 
@@ -815,4 +817,3 @@ public class CreateTableInfo {
         return distribution;
     }
 }
-

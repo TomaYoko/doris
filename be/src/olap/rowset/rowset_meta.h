@@ -84,6 +84,10 @@ public:
 
     void set_txn_id(int64_t txn_id) { _rowset_meta_pb.set_txn_id(txn_id); }
 
+    int64_t commit_id() const { return _rowset_meta_pb.commit_id(); }
+
+    void set_commit_id(int64_t commit_id) { _rowset_meta_pb.set_commit_id(commit_id); }
+
     int32_t tablet_schema_hash() const { return _rowset_meta_pb.tablet_schema_hash(); }
 
     void set_tablet_schema_hash(int64_t tablet_schema_hash) {

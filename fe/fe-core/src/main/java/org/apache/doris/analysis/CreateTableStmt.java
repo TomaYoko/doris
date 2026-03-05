@@ -470,8 +470,10 @@ public class CreateTableStmt extends DdlStmt {
                 && keysDesc.getKeysType() == KeysType.UNIQUE_KEYS) {
             if (enableUniqueKeyMergeOnWrite) {
                 columnDefs.add(ColumnDef.newVersionColumnDef(AggregateType.NONE));
+                columnDefs.add(ColumnDef.newCommitIdColumnDef(AggregateType.NONE));
             } else {
                 columnDefs.add(ColumnDef.newVersionColumnDef(AggregateType.REPLACE));
+                columnDefs.add(ColumnDef.newCommitIdColumnDef(AggregateType.REPLACE));
             }
         }
         Set<String> columnSet = Sets.newTreeSet(String.CASE_INSENSITIVE_ORDER);

@@ -214,6 +214,7 @@ public class LoadCommand extends Command implements ForwardWithSync {
         } else {
             for (String olapColumn : olapColumns) {
                 if (olapColumn.equalsIgnoreCase(Column.VERSION_COL)
+                        || olapColumn.equalsIgnoreCase(Column.COMMIT_ID_COL)
                         || olapColumn.equalsIgnoreCase(Column.SEQUENCE_COL)) {
                     continue;
                 }

@@ -785,6 +785,31 @@ Status SegmentWriter::fill_missing_columns(vectorized::MutableColumns& mutable_f
 
 Status SegmentWriter::append_block(const vectorized::Block* block, size_t row_pos,
                                    size_t num_rows) {
+    if (_opts.rowset_ctx != nullptr) {
+        if (const auto* commit_id_column = block->try_get_by_name(COMMIT_ID_COL)) {
+            const auto* commit_id_data_column = commit_id_column->column.get();
+            if (const auto* nullable_column =
+                        check_and_get_column<const vectorized::ColumnNullable>(
+                                commit_id_data_column)) {
+                commit_id_data_column = &nullable_column->get_nested_column();
+            }
+            const auto* commit_id_values =
+                    check_and_get_column<const vectorized::ColumnInt64>(commit_id_data_column);
+            if (commit_id_values == nullptr) {
+                return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                        "invalid commit id column type in block");
+            }
+            auto commit_id = commit_id_values->get_element(row_pos);
+            if (_opts.rowset_ctx->commit_id == -1) {
+                _opts.rowset_ctx->commit_id = commit_id;
+            } else if (_opts.rowset_ctx->commit_id != commit_id) {
+                return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                        "inconsistent commit id in single import batch, expected={}, got={}",
+                        _opts.rowset_ctx->commit_id, commit_id);
+            }
+        }
+    }
+
     if (_opts.rowset_ctx->partial_update_info &&
         _opts.rowset_ctx->partial_update_info->is_partial_update &&
         _opts.write_type == DataWriteType::TYPE_DIRECT &&

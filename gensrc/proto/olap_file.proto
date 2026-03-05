@@ -114,6 +114,7 @@ message RowsetMetaPB {
     // to indicate whether the data between the segments overlap
     optional SegmentsOverlapPB segments_overlap_pb = 51 [default = OVERLAP_UNKNOWN];
     optional int64 compaction_level = 52 [default = 0];
+    optional int64 commit_id = 53 [default = -1];
 }
 
 message SegmentStatisticsPB {
