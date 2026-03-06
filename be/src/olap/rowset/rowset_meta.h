@@ -84,9 +84,29 @@ public:
 
     void set_txn_id(int64_t txn_id) { _rowset_meta_pb.set_txn_id(txn_id); }
 
-    int64_t commit_id() const { return _rowset_meta_pb.commit_id(); }
+    int64_t begin_commit_id() const {
+        return _rowset_meta_pb.has_begin_commit_id() ? _rowset_meta_pb.begin_commit_id()
+                                                      : _rowset_meta_pb.commit_id();
+    }
 
-    void set_commit_id(int64_t commit_id) { _rowset_meta_pb.set_commit_id(commit_id); }
+    void set_begin_commit_id(int64_t begin_commit_id) {
+        _rowset_meta_pb.set_begin_commit_id(begin_commit_id);
+    }
+
+    int64_t end_commit_id() const {
+        return _rowset_meta_pb.has_end_commit_id() ? _rowset_meta_pb.end_commit_id()
+                                                    : _rowset_meta_pb.commit_id();
+    }
+
+    void set_end_commit_id(int64_t end_commit_id) { _rowset_meta_pb.set_end_commit_id(end_commit_id); }
+
+    int64_t commit_id() const { return end_commit_id(); }
+
+    void set_commit_id(int64_t commit_id) {
+        _rowset_meta_pb.set_commit_id(commit_id);
+        _rowset_meta_pb.set_begin_commit_id(commit_id);
+        _rowset_meta_pb.set_end_commit_id(commit_id);
+    }
 
     int32_t tablet_schema_hash() const { return _rowset_meta_pb.tablet_schema_hash(); }
 
