@@ -788,9 +788,11 @@ Status SegmentWriter::append_block(const vectorized::Block* block, size_t row_po
     if (_opts.rowset_ctx != nullptr) {
         if (const auto* commit_id_column = block->try_get_by_name(COMMIT_ID_COL)) {
             const auto* commit_id_data_column = commit_id_column->column.get();
+            const uint8_t* null_map = nullptr;
             if (const auto* nullable_column =
                         check_and_get_column<const vectorized::ColumnNullable>(
                                 commit_id_data_column)) {
+                null_map = nullable_column->get_null_map_data().data();
                 commit_id_data_column = &nullable_column->get_nested_column();
             }
             const auto* commit_id_values =
@@ -799,13 +801,20 @@ Status SegmentWriter::append_block(const vectorized::Block* block, size_t row_po
                 return Status::Error<ErrorCode::INTERNAL_ERROR>(
                         "invalid commit id column type in block");
             }
-            auto commit_id = commit_id_values->get_element(row_pos);
-            if (_opts.rowset_ctx->commit_id == -1) {
-                _opts.rowset_ctx->commit_id = commit_id;
-            } else if (_opts.rowset_ctx->commit_id != commit_id) {
-                return Status::Error<ErrorCode::INTERNAL_ERROR>(
-                        "inconsistent commit id in single import batch, expected={}, got={}",
-                        _opts.rowset_ctx->commit_id, commit_id);
+
+            for (size_t idx = row_pos; idx < row_pos + num_rows; ++idx) {
+                if (null_map != nullptr && null_map[idx]) {
+                    return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                            "commit id column should not be null");
+                }
+                auto commit_id = commit_id_values->get_element(idx);
+                if (_opts.rowset_ctx->commit_id == -1) {
+                    _opts.rowset_ctx->commit_id = commit_id;
+                } else if (_opts.rowset_ctx->commit_id != commit_id) {
+                    return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                            "inconsistent commit id in single import batch, expected={}, got={}",
+                            _opts.rowset_ctx->commit_id, commit_id);
+                }
             }
         }
     }
