@@ -47,6 +47,8 @@ struct RowsetWriterContext {
               rowset_state(PREPARED),
               version(Version(0, 0)),
               txn_id(0),
+              begin_commit_id(-1),
+              end_commit_id(-1),
               tablet_uid(0, 0),
               segments_overlap(OVERLAP_UNKNOWN),
               schema_lock(new std::mutex) {
@@ -73,6 +75,8 @@ struct RowsetWriterContext {
 
     // properties for pending rowset
     int64_t txn_id;
+    int64_t begin_commit_id;
+    int64_t end_commit_id;
     PUniqueId load_id;
     TabletUid tablet_uid;
     // indicate whether the data among segments is overlapping.

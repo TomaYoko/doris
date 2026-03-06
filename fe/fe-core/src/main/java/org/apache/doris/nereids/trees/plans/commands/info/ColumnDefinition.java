@@ -670,4 +670,9 @@ public class ColumnDefinition {
                 Optional.of(new DefaultValue(DefaultValue.ZERO_NUMBER)), "doris version hidden column", false);
     }
 
+    public static ColumnDefinition newCommitIdColumnDefinition(AggregateType aggregateType) {
+        return new ColumnDefinition(Column.COMMIT_ID_COL, BigIntType.INSTANCE, false, aggregateType, false,
+                Optional.of(new DefaultValue(DefaultValue.ZERO_NUMBER)), "doris commit id hidden column", false);
+    }
+
 }

@@ -104,7 +104,8 @@ public class GroupCommitInserter {
         int filterSize = 0;
         for (Slot slot : physicalOlapTableSink.getOutput()) {
             if (slot.getName().contains(Column.DELETE_SIGN)
-                    || slot.getName().contains(Column.VERSION_COL)) {
+                    || slot.getName().contains(Column.VERSION_COL)
+                    || slot.getName().contains(Column.COMMIT_ID_COL)) {
                 filterSize += 1;
             }
         }

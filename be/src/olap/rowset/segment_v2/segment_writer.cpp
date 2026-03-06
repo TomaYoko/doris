@@ -785,6 +785,56 @@ Status SegmentWriter::fill_missing_columns(vectorized::MutableColumns& mutable_f
 
 Status SegmentWriter::append_block(const vectorized::Block* block, size_t row_pos,
                                    size_t num_rows) {
+    if (_opts.rowset_ctx != nullptr) {
+        if (const auto* commit_id_column = block->try_get_by_name(COMMIT_ID_COL)) {
+            const auto* commit_id_data_column = commit_id_column->column.get();
+            const uint8_t* null_map = nullptr;
+            if (const auto* nullable_column =
+                        check_and_get_column<const vectorized::ColumnNullable>(
+                                commit_id_data_column)) {
+                null_map = nullable_column->get_null_map_data().data();
+                commit_id_data_column = &nullable_column->get_nested_column();
+            }
+            const auto* commit_id_values =
+                    check_and_get_column<const vectorized::ColumnInt64>(commit_id_data_column);
+            if (commit_id_values == nullptr) {
+                return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                        "invalid commit id column type in block");
+            }
+
+            int64_t first_commit_id = -1;
+            int64_t last_commit_id = -1;
+            for (size_t idx = row_pos; idx < row_pos + num_rows; ++idx) {
+                if (null_map != nullptr && null_map[idx]) {
+                    return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                            "commit id column should not be null");
+                }
+                auto commit_id = commit_id_values->get_element(idx);
+                if (first_commit_id == -1) {
+                    first_commit_id = commit_id;
+                }
+                if (last_commit_id > commit_id) {
+                    return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                            "commit id should be nondecreasing in a write block, previous={}, current={}",
+                            last_commit_id, commit_id);
+                }
+                last_commit_id = commit_id;
+            }
+
+            if (_opts.rowset_ctx->begin_commit_id == -1) {
+                _opts.rowset_ctx->begin_commit_id = first_commit_id;
+                _opts.rowset_ctx->end_commit_id = last_commit_id;
+            } else {
+                if (_opts.rowset_ctx->end_commit_id > first_commit_id) {
+                    return Status::Error<ErrorCode::INTERNAL_ERROR>(
+                            "commit id should be nondecreasing across write blocks, previous_end={}, current_begin={}",
+                            _opts.rowset_ctx->end_commit_id, first_commit_id);
+                }
+                _opts.rowset_ctx->end_commit_id = last_commit_id;
+            }
+        }
+    }
+
     if (_opts.rowset_ctx->partial_update_info &&
         _opts.rowset_ctx->partial_update_info->is_partial_update &&
         _opts.write_type == DataWriteType::TYPE_DIRECT &&

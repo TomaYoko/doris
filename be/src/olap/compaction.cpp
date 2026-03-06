@@ -261,6 +261,12 @@ void Compaction::build_basic_info() {
             Version(_input_rowsets.front()->start_version(), _input_rowsets.back()->end_version());
 
     _newest_write_timestamp = _input_rowsets.back()->newest_write_timestamp();
+    _begin_commit_id = _input_rowsets.front()->rowset_meta()->begin_commit_id();
+    _end_commit_id = _input_rowsets.back()->rowset_meta()->end_commit_id();
+    for (const auto& rowset : _input_rowsets) {
+        _begin_commit_id = std::min(_begin_commit_id, rowset->rowset_meta()->begin_commit_id());
+        _end_commit_id = std::max(_end_commit_id, rowset->rowset_meta()->end_commit_id());
+    }
 
     std::vector<RowsetMetaSharedPtr> rowset_metas(_input_rowsets.size());
     std::transform(_input_rowsets.begin(), _input_rowsets.end(), rowset_metas.begin(),
@@ -806,6 +812,8 @@ Status Compaction::construct_output_rowset_writer(RowsetWriterContext& ctx, bool
     ctx.segments_overlap = NONOVERLAPPING;
     ctx.tablet_schema = _cur_tablet_schema;
     ctx.newest_write_timestamp = _newest_write_timestamp;
+    ctx.begin_commit_id = _begin_commit_id;
+    ctx.end_commit_id = _end_commit_id;
     ctx.write_type = DataWriteType::TYPE_COMPACTION;
     if (config::inverted_index_compaction_enable &&
         (((_tablet->keys_type() == KeysType::UNIQUE_KEYS &&

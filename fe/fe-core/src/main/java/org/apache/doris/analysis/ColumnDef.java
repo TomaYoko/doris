@@ -255,6 +255,12 @@ public class ColumnDef {
                 -1, new ColumnDef.DefaultValue(true, "0"), "doris version hidden column", false);
     }
 
+    public static ColumnDef newCommitIdColumnDef(AggregateType aggregateType) {
+        return new ColumnDef(Column.COMMIT_ID_COL, TypeDef.create(PrimitiveType.BIGINT), false,
+                aggregateType, false, -1, new ColumnDef.DefaultValue(true, "0"),
+                "doris commit id hidden column", false);
+    }
+
     public boolean isAllowNull() {
         return isAllowNull;
     }

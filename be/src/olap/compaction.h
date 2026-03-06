@@ -130,6 +130,8 @@ protected:
     Version _output_version;
 
     int64_t _newest_write_timestamp;
+    int64_t _begin_commit_id = -1;
+    int64_t _end_commit_id = -1;
     std::unique_ptr<RowIdConversion> _rowid_conversion = nullptr;
     TabletSchemaSPtr _cur_tablet_schema;
 
