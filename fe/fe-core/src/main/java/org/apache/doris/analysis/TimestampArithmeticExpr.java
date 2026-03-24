@@ -209,7 +209,7 @@ public class TimestampArithmeticExpr extends Expr {
 
             type = Type.BIGINT;
             opcode = getOpCode();
-            funcOpName = String.format("%sS_%s", timeUnit, "DIFF");
+            funcOpName = buildDiffFunctionName(timeUnit);
         } else {
             if (funcName != null) {
                 if (funcName.toUpperCase().equals("DATE_ADD")
@@ -257,20 +257,34 @@ public class TimestampArithmeticExpr extends Expr {
                         "the second argument must be a scalar type. but it is " + getChild(1).toSql());
             }
 
-            // The second child must be of type 'INT' or castable to it.
-            if (!getChild(1).getType().isScalarType(PrimitiveType.INT)) {
-                if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.INT)) {
-                    throw new AnalysisException("Operand '" + getChild(1).toSql()
-                            + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
-                            + getChild(1).getType() + "' which is incompatible with expected type 'INT'.");
+            if (timeUnit == TimeUnit.YEAR || timeUnit == TimeUnit.QUARTER || timeUnit == TimeUnit.MONTH
+                    || timeUnit == TimeUnit.WEEK || timeUnit == TimeUnit.DAY || timeUnit == TimeUnit.HOUR
+                    || timeUnit == TimeUnit.MINUTE || timeUnit == TimeUnit.SECOND
+                    || timeUnit == TimeUnit.MICROSECOND) {
+                // The second child must be of type 'INT' or castable to it.
+                if (!getChild(1).getType().isScalarType(PrimitiveType.INT)) {
+                    if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.INT)) {
+                        throw new AnalysisException("Operand '" + getChild(1).toSql()
+                                + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
+                                + getChild(1).getType() + "' which is incompatible with expected type 'INT'.");
+                    }
+                    castChild(Type.INT, 1);
                 }
-                castChild(Type.INT, 1);
+            } else {
+                // Composite MySQL interval units use string-like values, e.g. '1 10:11:12.123456'.
+                if (!getChild(1).getType().isStringType()) {
+                    if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.VARCHAR)) {
+                        throw new AnalysisException("Operand '" + getChild(1).toSql()
+                                + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
+                                + getChild(1).getType() + "' which is incompatible with expected type 'VARCHAR'.");
+                    }
+                    castChild(Type.VARCHAR, 1);
+                }
             }
 
             type = dateType;
             opcode = getOpCode();
-            funcOpName = String.format("%sS_%s", timeUnit,
-                    (op == ArithmeticExpr.Operator.ADD) ? "ADD" : "SUB");
+            funcOpName = buildAddSubFunctionName(timeUnit, op == ArithmeticExpr.Operator.ADD);
         }
 
         Type[] childrenTypes = collectChildReturnTypes();
@@ -361,6 +375,75 @@ public class TimestampArithmeticExpr extends Expr {
             }
         }
         return null;
+    }
+
+    private static String buildDiffFunctionName(TimeUnit unit) throws AnalysisException {
+        switch (unit) {
+            case YEAR:
+                return "YEARS_DIFF";
+            case MONTH:
+                return "MONTHS_DIFF";
+            case WEEK:
+                return "WEEKS_DIFF";
+            case DAY:
+                return "DAYS_DIFF";
+            case HOUR:
+                return "HOURS_DIFF";
+            case MINUTE:
+                return "MINUTES_DIFF";
+            case SECOND:
+                return "SECONDS_DIFF";
+            case MICROSECOND:
+                return "MICROSECONDS_DIFF";
+            default:
+                throw new AnalysisException("Unsupported time unit in timestamp diff: " + unit);
+        }
+    }
+
+    private static String buildAddSubFunctionName(TimeUnit unit, boolean isAdd) throws AnalysisException {
+        String suffix = isAdd ? "_ADD" : "_SUB";
+        switch (unit) {
+            case YEAR:
+                return "YEARS" + suffix;
+            case MONTH:
+                return "MONTHS" + suffix;
+            case WEEK:
+                return "WEEKS" + suffix;
+            case DAY:
+                return "DAYS" + suffix;
+            case HOUR:
+                return "HOURS" + suffix;
+            case MINUTE:
+                return "MINUTES" + suffix;
+            case SECOND:
+                return "SECONDS" + suffix;
+            case MICROSECOND:
+                return "MICROSECONDS" + suffix;
+            case YEAR_MONTH:
+                return "YEAR_MONTH" + suffix;
+            case DAY_HOUR:
+                return "DAY_HOUR" + suffix;
+            case DAY_MINUTE:
+                return "DAY_MINUTE" + suffix;
+            case DAY_SECOND:
+                return "DAY_SECOND" + suffix;
+            case DAY_MICROSECOND:
+                return "DAY_MICROSECOND" + suffix;
+            case HOUR_MINUTE:
+                return "HOUR_MINUTE" + suffix;
+            case HOUR_SECOND:
+                return "HOUR_SECOND" + suffix;
+            case HOUR_MICROSECOND:
+                return "HOUR_MICROSECOND" + suffix;
+            case MINUTE_SECOND:
+                return "MINUTE_SECOND" + suffix;
+            case MINUTE_MICROSECOND:
+                return "MINUTE_MICROSECOND" + suffix;
+            case SECOND_MICROSECOND:
+                return "SECOND_MICROSECOND" + suffix;
+            default:
+                throw new AnalysisException("Unsupported time unit in timestamp arithmetic: " + unit);
+        }
     }
 
     @Override
