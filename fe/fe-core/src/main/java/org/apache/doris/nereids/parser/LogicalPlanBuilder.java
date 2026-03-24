@@ -299,41 +299,34 @@ import org.apache.doris.nereids.trees.expressions.functions.scalar.DayCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.DayFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.DaysAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.DaysDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.DaysSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.ElementAt;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.EncryptKeyRef;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.HourCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.HourFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.HoursAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.HoursDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.HoursSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.Lambda;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MinuteCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MinuteFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MinutesAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MinutesDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.MinutesSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MonthCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MonthFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MonthsAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.MonthsDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.MonthsSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.Now;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.SecondCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.SecondFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.SecondsAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.SecondsDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.SecondsSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.WeekCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.WeekFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.WeeksAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.WeeksDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.WeeksSub;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.YearCeil;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.YearFloor;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.YearsAdd;
 import org.apache.doris.nereids.trees.expressions.functions.scalar.YearsDiff;
-import org.apache.doris.nereids.trees.expressions.functions.scalar.YearsSub;
 import org.apache.doris.nereids.trees.expressions.literal.ArrayLiteral;
 import org.apache.doris.nereids.trees.expressions.literal.BigIntLiteral;
 import org.apache.doris.nereids.trees.expressions.literal.BooleanLiteral;
@@ -1881,28 +1874,20 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
     public Expression visitDate_add(Date_addContext ctx) {
         Expression timeStamp = (Expression) visit(ctx.timestamp);
         Expression amount = (Expression) visit(ctx.unitsAmount);
-        if (ctx.unit == null) {
-            //use "DAY" as unit by default
-            return new DaysAdd(timeStamp, amount);
-        }
+        String unitDesc = ctx.unit == null ? "DAY" : ctx.unit.getText();
+        Interval.TimeUnit unit = Interval.TimeUnit.of(unitDesc)
+                .orElseThrow(() -> new ParseException("Unsupported time unit: " + unitDesc, ctx));
+        return new TimestampArithmetic(ctx.name.getText(), Operator.ADD, timeStamp, amount, unit);
+    }
 
-        if ("Year".equalsIgnoreCase(ctx.unit.getText())) {
-            return new YearsAdd(timeStamp, amount);
-        } else if ("MONTH".equalsIgnoreCase(ctx.unit.getText())) {
-            return new MonthsAdd(timeStamp, amount);
-        } else if ("WEEK".equalsIgnoreCase(ctx.unit.getText())) {
-            return new WeeksAdd(timeStamp, amount);
-        } else if ("DAY".equalsIgnoreCase(ctx.unit.getText())) {
-            return new DaysAdd(timeStamp, amount);
-        } else if ("Hour".equalsIgnoreCase(ctx.unit.getText())) {
-            return new HoursAdd(timeStamp, amount);
-        } else if ("Minute".equalsIgnoreCase(ctx.unit.getText())) {
-            return new MinutesAdd(timeStamp, amount);
-        } else if ("Second".equalsIgnoreCase(ctx.unit.getText())) {
-            return new SecondsAdd(timeStamp, amount);
-        }
-        throw new ParseException("Unsupported time unit: " + ctx.unit
-                + ", supported time unit: YEAR/MONTH/DAY/HOUR/MINUTE/SECOND", ctx);
+    @Override
+    public Expression visitDate_sub(Date_subContext ctx) {
+        Expression timeStamp = (Expression) visit(ctx.timestamp);
+        Expression amount = (Expression) visit(ctx.unitsAmount);
+        String unitDesc = ctx.unit == null ? "DAY" : ctx.unit.getText();
+        Interval.TimeUnit unit = Interval.TimeUnit.of(unitDesc)
+                .orElseThrow(() -> new ParseException("Unsupported time unit: " + unitDesc, ctx));
+        return new TimestampArithmetic(ctx.name.getText(), Operator.SUBTRACT, timeStamp, amount, unit);
     }
 
     @Override
@@ -1937,34 +1922,6 @@ public class LogicalPlanBuilder extends DorisParserBaseVisitor<Object> {
         } else {
             return new ArrayRange(start);
         }
-    }
-
-    @Override
-    public Expression visitDate_sub(Date_subContext ctx) {
-        Expression timeStamp = (Expression) visit(ctx.timestamp);
-        Expression amount = (Expression) visit(ctx.unitsAmount);
-        if (ctx.unit == null) {
-            //use "DAY" as unit by default
-            return new DaysSub(timeStamp, amount);
-        }
-
-        if ("Year".equalsIgnoreCase(ctx.unit.getText())) {
-            return new YearsSub(timeStamp, amount);
-        } else if ("MONTH".equalsIgnoreCase(ctx.unit.getText())) {
-            return new MonthsSub(timeStamp, amount);
-        } else if ("WEEK".equalsIgnoreCase(ctx.unit.getText())) {
-            return new WeeksSub(timeStamp, amount);
-        } else if ("DAY".equalsIgnoreCase(ctx.unit.getText())) {
-            return new DaysSub(timeStamp, amount);
-        } else if ("Hour".equalsIgnoreCase(ctx.unit.getText())) {
-            return new HoursSub(timeStamp, amount);
-        } else if ("Minute".equalsIgnoreCase(ctx.unit.getText())) {
-            return new MinutesSub(timeStamp, amount);
-        } else if ("Second".equalsIgnoreCase(ctx.unit.getText())) {
-            return new SecondsSub(timeStamp, amount);
-        }
-        throw new ParseException("Unsupported time unit: " + ctx.unit
-                + ", supported time unit: YEAR/MONTH/DAY/HOUR/MINUTE/SECOND", ctx);
     }
 
     @Override

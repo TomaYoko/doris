@@ -952,13 +952,37 @@ public class TypeCoercionUtils {
         if (!(right.getDataType() instanceof PrimitiveType)) {
             throw new AnalysisException("the second argument must be a scalar type. but it is " + right.toSql());
         }
-        if (!right.getDataType().isIntegerType()) {
-            if (!ScalarType.canCastTo((ScalarType) right.getDataType().toCatalogDataType(), Type.INT)) {
-                throw new AnalysisException("Operand '" + right.toSql()
-                        + "' of timestamp arithmetic expression '" + timestampArithmetic.toSql() + "' returns type '"
-                        + right.getDataType() + "' which is incompatible with expected type 'INT'.");
-            }
-            right = castIfNotSameType(right, IntegerType.INSTANCE);
+        switch (timestampArithmetic.getTimeUnit()) {
+            case YEAR:
+            case QUARTER:
+            case MONTH:
+            case WEEK:
+            case DAY:
+            case HOUR:
+            case MINUTE:
+            case SECOND:
+            case MICROSECOND:
+                if (!right.getDataType().isIntegerType()) {
+                    if (!ScalarType.canCastTo((ScalarType) right.getDataType().toCatalogDataType(), Type.INT)) {
+                        throw new AnalysisException("Operand '" + right.toSql()
+                                + "' of timestamp arithmetic expression '" + timestampArithmetic.toSql()
+                                + "' returns type '" + right.getDataType()
+                                + "' which is incompatible with expected type 'INT'.");
+                    }
+                    right = castIfNotSameType(right, IntegerType.INSTANCE);
+                }
+                break;
+            default:
+                if (!right.getDataType().isStringLikeType()) {
+                    if (!ScalarType.canCastTo((ScalarType) right.getDataType().toCatalogDataType(), Type.VARCHAR)) {
+                        throw new AnalysisException("Operand '" + right.toSql()
+                                + "' of timestamp arithmetic expression '" + timestampArithmetic.toSql()
+                                + "' returns type '" + right.getDataType()
+                                + "' which is incompatible with expected type 'VARCHAR'.");
+                    }
+                    right = castIfNotSameType(right, VarcharType.SYSTEM_DEFAULT);
+                }
+                break;
         }
 
         return timestampArithmetic.withChildren(left, right);
