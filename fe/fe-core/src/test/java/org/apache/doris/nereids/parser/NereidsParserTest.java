@@ -137,6 +137,23 @@ public class NereidsParserTest extends ParserTestBase {
     }
 
     @Test
+    public void testParseDateAddWithMysqlCompositeIntervalUnit() {
+        NereidsParser nereidsParser = new NereidsParser();
+        Exception exceptionOccurred = null;
+        try {
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval '1-2' YEAR_MONTH)");
+            nereidsParser.parseSingle(
+                    "select date_add('2024-01-01 00:00:00', interval '1 10:11:12.123456' DAY_MICROSECOND)");
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval 2 QUARTER)");
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval 2 MICROSECOND)");
+        } catch (Exception e) {
+            exceptionOccurred = e;
+            e.printStackTrace();
+        }
+        Assertions.assertNull(exceptionOccurred);
+    }
+
+    @Test
     public void testExplainNormal() {
         String sql = "explain select `AD``D` from t1 where a = 1";
         NereidsParser nereidsParser = new NereidsParser();

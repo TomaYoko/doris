@@ -1427,9 +1427,7 @@ valueExpression
     ;
 
 datetimeUnit
-    : YEAR | MONTH
-    | WEEK | DAY
-    | HOUR | MINUTE | SECOND
+    : identifier
     ;
 
 primaryExpression
@@ -1610,7 +1608,7 @@ interval
     ;
 
 unitIdentifier
-    : YEAR | MONTH | WEEK | DAY | HOUR | MINUTE | SECOND
+    : identifier
     ;
 
 dataTypeWithNullable

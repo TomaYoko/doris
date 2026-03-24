@@ -257,14 +257,29 @@ public class TimestampArithmeticExpr extends Expr {
                         "the second argument must be a scalar type. but it is " + getChild(1).toSql());
             }
 
-            // The second child must be of type 'INT' or castable to it.
-            if (!getChild(1).getType().isScalarType(PrimitiveType.INT)) {
-                if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.INT)) {
-                    throw new AnalysisException("Operand '" + getChild(1).toSql()
-                            + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
-                            + getChild(1).getType() + "' which is incompatible with expected type 'INT'.");
+            if (timeUnit == TimeUnit.YEAR || timeUnit == TimeUnit.QUARTER || timeUnit == TimeUnit.MONTH
+                    || timeUnit == TimeUnit.WEEK || timeUnit == TimeUnit.DAY || timeUnit == TimeUnit.HOUR
+                    || timeUnit == TimeUnit.MINUTE || timeUnit == TimeUnit.SECOND
+                    || timeUnit == TimeUnit.MICROSECOND) {
+                // The second child must be of type 'INT' or castable to it.
+                if (!getChild(1).getType().isScalarType(PrimitiveType.INT)) {
+                    if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.INT)) {
+                        throw new AnalysisException("Operand '" + getChild(1).toSql()
+                                + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
+                                + getChild(1).getType() + "' which is incompatible with expected type 'INT'.");
+                    }
+                    castChild(Type.INT, 1);
                 }
-                castChild(Type.INT, 1);
+            } else {
+                // Composite MySQL interval units use string-like values, e.g. '1 10:11:12.123456'.
+                if (!getChild(1).getType().isStringType()) {
+                    if (!ScalarType.canCastTo((ScalarType) getChild(1).getType(), Type.VARCHAR)) {
+                        throw new AnalysisException("Operand '" + getChild(1).toSql()
+                                + "' of timestamp arithmetic expression '" + toSql() + "' returns type '"
+                                + getChild(1).getType() + "' which is incompatible with expected type 'VARCHAR'.");
+                    }
+                    castChild(Type.VARCHAR, 1);
+                }
             }
 
             type = dateType;
