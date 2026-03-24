@@ -137,6 +137,37 @@ public class NereidsParserTest extends ParserTestBase {
     }
 
     @Test
+    public void testParseDateAddWithMysqlCompositeIntervalUnit() {
+        NereidsParser nereidsParser = new NereidsParser();
+        Exception exceptionOccurred = null;
+        try {
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval '1-2' YEAR_MONTH)");
+            nereidsParser.parseSingle(
+                    "select date_add('2024-01-01 00:00:00', interval '1 10:11:12.123456' DAY_MICROSECOND)");
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval 2 QUARTER)");
+            nereidsParser.parseSingle("select date_add('2024-01-01 00:00:00', interval 2 MICROSECOND)");
+            nereidsParser.parseSingle("select date_sub('2024-01-01 00:00:00', interval 2 QUARTER)");
+            nereidsParser.parseSingle("select date_sub('2024-01-01 00:00:00', interval 2 MICROSECOND)");
+            nereidsParser.parseSingle("select timestampadd(quarter, 2, '2024-01-01 00:00:00')");
+            nereidsParser.parseSingle("select timestampadd(microsecond, 2, '2024-01-01 00:00:00')");
+            nereidsParser.parseSingle(
+                    "select timestampdiff(microsecond, '2024-01-01 00:00:00', '2024-01-01 00:00:01')");
+            nereidsParser.parseSingle(
+                    "select timestampdiff(quarter, '2024-01-01 00:00:00', '2025-01-01 00:00:00')");
+        } catch (Exception e) {
+            exceptionOccurred = e;
+            e.printStackTrace();
+        }
+        Assertions.assertNull(exceptionOccurred);
+    }
+
+    @Test
+    public void testParseDateAddInvalidIntervalUnit() {
+        parsePlan("select date_add('2024-01-01 00:00:00', interval 1 FOO_BAR)")
+                .assertThrowsExactly(ParseException.class);
+    }
+
+    @Test
     public void testExplainNormal() {
         String sql = "explain select `AD``D` from t1 where a = 1";
         NereidsParser nereidsParser = new NereidsParser();

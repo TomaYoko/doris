@@ -152,6 +152,11 @@ public class FEFunctionsTest {
         actualResult = FEFunctions.dateAdd(new DateLiteral("2018-08-08", Type.DATE), new IntLiteral(-1));
         expectedResult = new DateLiteral("2018-08-07", Type.DATE);
         Assert.assertEquals(expectedResult, actualResult);
+
+        actualResult = FEFunctions.dateAddDateBigInt(new DateLiteral("2018-08-08", Type.DATE),
+                new IntLiteral(2, Type.BIGINT));
+        expectedResult = new DateLiteral("2018-08-10", Type.DATE);
+        Assert.assertEquals(expectedResult, actualResult);
     }
 
     @Test
@@ -175,6 +180,11 @@ public class FEFunctionsTest {
         expectedResult = new DateLiteral("2018-08-07", Type.DATE);
         Assert.assertEquals(expectedResult, actualResult);
 
+        actualResult = FEFunctions.addDateBigInt(new DateLiteral("2018-08-08", Type.DATE),
+                new IntLiteral(2, Type.BIGINT));
+        expectedResult = new DateLiteral("2018-08-10", Type.DATE);
+        Assert.assertEquals(expectedResult, actualResult);
+
     }
 
     @Test
@@ -196,6 +206,11 @@ public class FEFunctionsTest {
 
         actualResult = FEFunctions.daysAdd(new DateLiteral("2018-08-08", Type.DATE), new IntLiteral(-1));
         expectedResult = new DateLiteral("2018-08-07", Type.DATE);
+        Assert.assertEquals(expectedResult, actualResult);
+
+        actualResult = FEFunctions.daysAddDateBigInt(new DateLiteral("2018-08-08", Type.DATE),
+                new IntLiteral(2, Type.BIGINT));
+        expectedResult = new DateLiteral("2018-08-10", Type.DATE);
         Assert.assertEquals(expectedResult, actualResult);
     }
 
