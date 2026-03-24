@@ -1427,9 +1427,12 @@ valueExpression
     ;
 
 datetimeUnit
-    : YEAR | MONTH
-    | WEEK | DAY
-    | HOUR | MINUTE | SECOND
+    : YEAR | QUARTER | MONTH | WEEK | DAY | HOUR | MINUTE | SECOND | MICROSECOND
+    | YEAR_MONTH
+    | DAY_HOUR | DAY_MINUTE | DAY_SECOND | DAY_MICROSECOND
+    | HOUR_MINUTE | HOUR_SECOND | HOUR_MICROSECOND
+    | MINUTE_SECOND | MINUTE_MICROSECOND
+    | SECOND_MICROSECOND
     ;
 
 primaryExpression
@@ -1610,7 +1613,7 @@ interval
     ;
 
 unitIdentifier
-    : YEAR | MONTH | WEEK | DAY | HOUR | MINUTE | SECOND
+    : datetimeUnit
     ;
 
 dataTypeWithNullable
@@ -1813,6 +1816,10 @@ nonReserved
     | DATEV1
     | DATEV2
     | DAY
+    | DAY_HOUR
+    | DAY_MICROSECOND
+    | DAY_MINUTE
+    | DAY_SECOND
     | DAYS_ADD
     | DAYS_SUB
     | DECIMAL
@@ -1867,6 +1874,9 @@ nonReserved
     | HOSTNAME
     | HOTSPOT
     | HOUR
+    | HOUR_MICROSECOND
+    | HOUR_MINUTE
+    | HOUR_SECOND
     | HUB
     | IDENTIFIED
     | IGNORE
@@ -1915,6 +1925,9 @@ nonReserved
     | MIGRATIONS
     | MIN
     | MINUTE
+    | MICROSECOND
+    | MINUTE_MICROSECOND
+    | MINUTE_SECOND
     | MODIFY
     | MONTH
     | MTMV
@@ -1960,6 +1973,7 @@ nonReserved
     | QUANTILE_STATE
     | QUANTILE_UNION
     | QUERY
+    | QUARTER
     | QUOTA
     | RANDOM
     | RECENT
@@ -1989,6 +2003,7 @@ nonReserved
     | SCHEDULER
     | SCHEMA
     | SECOND
+    | SECOND_MICROSECOND
     | SERIALIZABLE
     | SET_SESSION_VARIABLE
     | SEQUENCE
@@ -2047,5 +2062,6 @@ nonReserved
     | WEEK
     | WORK
     | YEAR
+    | YEAR_MONTH
 //--DEFAULT-NON-RESERVED-END
     ;

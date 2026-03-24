@@ -119,6 +119,26 @@ public class FEFunctions {
         return daysAdd(date, day);
     }
 
+    @FEFunction(name = "date_add", argTypes = { "DATETIME", "BIGINT" }, returnType = "DATETIME")
+    public static DateLiteral dateAddBigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "date_add", argTypes = { "DATE", "BIGINT" }, returnType = "DATE")
+    public static DateLiteral dateAddDateBigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "date_add", argTypes = { "DATEV2", "BIGINT" }, returnType = "DATEV2")
+    public static DateLiteral dateAddDateV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "date_add", argTypes = { "DATETIMEV2", "BIGINT" }, returnType = "DATETIMEV2")
+    public static DateLiteral dateAddDateTimeV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
     @FEFunction(name = "adddate", argTypes = { "DATETIME", "INT" }, returnType = "DATETIME")
     public static DateLiteral addDate(LiteralExpr date, LiteralExpr day) throws AnalysisException {
         return daysAdd(date, day);
@@ -131,6 +151,21 @@ public class FEFunctions {
 
     @FEFunction(name = "adddate", argTypes = { "DATETIMEV2", "INT" }, returnType = "DATETIMEV2")
     public static DateLiteral addDateDateTimeV2(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "adddate", argTypes = { "DATETIME", "BIGINT" }, returnType = "DATETIME")
+    public static DateLiteral addDateBigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "adddate", argTypes = { "DATEV2", "BIGINT" }, returnType = "DATEV2")
+    public static DateLiteral addDateDateV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "adddate", argTypes = { "DATETIMEV2", "BIGINT" }, returnType = "DATETIMEV2")
+    public static DateLiteral addDateDateTimeV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
         return daysAdd(date, day);
     }
 
@@ -204,6 +239,26 @@ public class FEFunctions {
     public static DateLiteral daysAddDateTimeV2(LiteralExpr date, LiteralExpr day) throws AnalysisException {
         DateLiteral dateLiteral = (DateLiteral) date;
         return dateLiteral.plusDays((int) day.getLongValue());
+    }
+
+    @FEFunction(name = "days_add", argTypes = { "DATETIME", "BIGINT" }, returnType = "DATETIME")
+    public static DateLiteral daysAddBigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAdd(date, day);
+    }
+
+    @FEFunction(name = "days_add", argTypes = { "DATE", "BIGINT" }, returnType = "DATE")
+    public static DateLiteral daysAddDateBigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAddDate(date, day);
+    }
+
+    @FEFunction(name = "days_add", argTypes = { "DATEV2", "BIGINT" }, returnType = "DATEV2")
+    public static DateLiteral daysAddDateV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAddDateV2(date, day);
+    }
+
+    @FEFunction(name = "days_add", argTypes = { "DATETIMEV2", "BIGINT" }, returnType = "DATETIMEV2")
+    public static DateLiteral daysAddDateTimeV2BigInt(LiteralExpr date, LiteralExpr day) throws AnalysisException {
+        return daysAddDateTimeV2(date, day);
     }
 
     @FEFunction(name = "hours_add", argTypes = { "DATETIME", "INT" }, returnType = "DATETIME")
