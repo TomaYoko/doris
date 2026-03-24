@@ -25,11 +25,15 @@ import org.apache.doris.nereids.trees.expressions.functions.ExplicitlyCastableSi
 import org.apache.doris.nereids.trees.expressions.functions.PropagateNullableOnDateLikeV2Args;
 import org.apache.doris.nereids.trees.expressions.shape.BinaryExpression;
 import org.apache.doris.nereids.trees.expressions.visitor.ExpressionVisitor;
+import org.apache.doris.nereids.types.BigIntType;
 import org.apache.doris.nereids.types.DateTimeType;
 import org.apache.doris.nereids.types.DateTimeV2Type;
 import org.apache.doris.nereids.types.DateType;
 import org.apache.doris.nereids.types.DateV2Type;
 import org.apache.doris.nereids.types.IntegerType;
+import org.apache.doris.nereids.types.LargeIntType;
+import org.apache.doris.nereids.types.SmallIntType;
+import org.apache.doris.nereids.types.TinyIntType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -47,15 +51,55 @@ public class DaysAdd extends ScalarFunction
     private static final List<FunctionSignature> SIGNATURES = Config.enable_date_conversion ? ImmutableList.of(
             FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
                     .args(DateTimeV2Type.SYSTEM_DEFAULT, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, LargeIntType.INSTANCE),
             FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, LargeIntType.INSTANCE),
             FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, IntegerType.INSTANCE),
-            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, IntegerType.INSTANCE)
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, LargeIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, LargeIntType.INSTANCE)
     ) : ImmutableList.of(
             FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeType.INSTANCE).args(DateTimeType.INSTANCE, LargeIntType.INSTANCE),
             FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateType.INSTANCE).args(DateType.INSTANCE, LargeIntType.INSTANCE),
             FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
                     .args(DateTimeV2Type.SYSTEM_DEFAULT, IntegerType.INSTANCE),
-            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, IntegerType.INSTANCE)
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateTimeV2Type.SYSTEM_DEFAULT)
+                    .args(DateTimeV2Type.SYSTEM_DEFAULT, LargeIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, IntegerType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, TinyIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, SmallIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, BigIntType.INSTANCE),
+            FunctionSignature.ret(DateV2Type.INSTANCE).args(DateV2Type.INSTANCE, LargeIntType.INSTANCE)
     );
 
     public DaysAdd(Expression arg0, Expression arg1) {
