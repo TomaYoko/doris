@@ -71,7 +71,19 @@ public class Interval extends Expression implements LeafExpression, AlwaysNotNul
         DAY("DAY", false, 400),
         HOUR("HOUR", true, 300),
         MINUTE("MINUTE", true, 200),
-        SECOND("SECOND", true, 100);
+        SECOND("SECOND", true, 100),
+        MICROSECOND("MICROSECOND", true, 50),
+        SECOND_MICROSECOND("SECOND_MICROSECOND", true, 40),
+        MINUTE_MICROSECOND("MINUTE_MICROSECOND", true, 39),
+        MINUTE_SECOND("MINUTE_SECOND", true, 38),
+        HOUR_MICROSECOND("HOUR_MICROSECOND", true, 37),
+        HOUR_SECOND("HOUR_SECOND", true, 36),
+        HOUR_MINUTE("HOUR_MINUTE", true, 35),
+        DAY_MICROSECOND("DAY_MICROSECOND", true, 34),
+        DAY_SECOND("DAY_SECOND", true, 33),
+        DAY_MINUTE("DAY_MINUTE", true, 32),
+        DAY_HOUR("DAY_HOUR", true, 31),
+        YEAR_MONTH("YEAR_MONTH", false, 30);
 
         private final String description;
         private final boolean isDateTimeUnit;
