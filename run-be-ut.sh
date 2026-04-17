@@ -410,6 +410,19 @@ export ASAN_OPTIONS=symbolize=1:abort_on_error=1:disable_coredump=0:unmap_shadow
 export UBSAN_OPTIONS=print_stacktrace=1
 export JAVA_OPTS="-Xmx1024m -DlogPath=${DORIS_HOME}/log/jni.log -Xloggc:${DORIS_HOME}/log/be.gc.log.${CUR_DATE} -Dsun.java.command=DorisBE -XX:-CriticalJNINatives -DJDBC_MIN_POOL=1 -DJDBC_MAX_POOL=100 -DJDBC_MAX_IDLE_TIME=300000"
 
+# ensure the GCC toolchain's libstdc++.so.6 is found before the system one,
+# so that prebuilt shared libs in lib/dist/ (e.g. libgdb_dist_calc.so) that
+# require a newer GLIBCXX version can load successfully.
+if [[ -n "${DORIS_GCC_HOME}" ]]; then
+    for _gcc_libdir in "${DORIS_GCC_HOME}/lib64" "${DORIS_GCC_HOME}/lib"; do
+        if [[ -f "${_gcc_libdir}/libstdc++.so.6" ]]; then
+            export LD_LIBRARY_PATH="${_gcc_libdir}:${DORIS_TEST_BINARY_DIR}/lib/dist:${LD_LIBRARY_PATH}"
+            break
+        fi
+    done
+    unset _gcc_libdir
+fi
+
 # find all executable test files
 test="${DORIS_TEST_BINARY_DIR}/doris_be_test"
 profraw=${DORIS_TEST_BINARY_DIR}/doris_be_test.profraw
